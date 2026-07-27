@@ -1,0 +1,31 @@
+# Java & Spring Boot
+target/
+*.jar
+*.war
+*.class
+.mvn/
+
+# Node.js & React
+node_modules/
+dist/
+build/
+.env.local
+.env.*.local
+
+# IDEs & OS
+.idea/
+*.iml
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Logs & Databases
+*.log
+*.h2.db
+*.mv.db
+*.trace.db
+data/
+
+# Screenshots: keep the directory, ignore large video files inside it
+screenshots/*.mp4
+screenshots/*.mov

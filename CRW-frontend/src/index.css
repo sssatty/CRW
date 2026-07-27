@@ -1,0 +1,109 @@
+:root {
+  --font-sans: 'Poppins', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-heading: 'Poppins', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  /* Modern Light Theme with Slight Brownish Parchment Aesthetic */
+  --bg: #f7f4ee;
+  --surface: #ffffff;
+  --surface-card: #ffffff;
+  --surface-hover: #f2ece4;
+  --text: #52463c;
+  --text-h: #2b231d;
+  --muted: #8c7c6d;
+  --border: #e6ded4;
+  --border-hover: #cbbba8;
+
+  --accent: #b45309;
+  --accent-light: #d97706;
+  --accent-gradient: linear-gradient(135deg, #92400e 0%, #b45309 50%, #d97706 100%);
+  --accent-bg: rgba(180, 83, 9, 0.08);
+  --accent-glow: rgba(180, 83, 9, 0.18);
+
+  --success: #15803d;
+  --success-bg: rgba(21, 128, 61, 0.1);
+  --warning: #b45309;
+  --warning-bg: rgba(180, 83, 9, 0.1);
+  --info: #1d4ed8;
+  --info-bg: rgba(29, 78, 216, 0.1);
+  --danger: #b91c1c;
+  --danger-bg: rgba(185, 28, 28, 0.1);
+
+  --shadow-sm: 0 2px 6px rgba(43, 35, 29, 0.04);
+  --shadow-md: 0 8px 24px -4px rgba(43, 35, 29, 0.08);
+  --shadow-lg: 0 20px 35px -10px rgba(43, 35, 29, 0.12);
+  --shadow-glow: 0 0 20px rgba(180, 83, 9, 0.15);
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-full: 9999px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-sans);
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: var(--text);
+  background-color: var(--bg);
+  background-image: 
+    radial-gradient(at 5% 5%, rgba(180, 83, 9, 0.03) 0px, transparent 40%),
+    radial-gradient(at 95% 95%, rgba(180, 83, 9, 0.03) 0px, transparent 40%);
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+#root {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  color: var(--text-h);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+a:hover {
+  color: var(--accent-light);
+}
+
+::selection {
+  background: var(--accent);
+  color: #ffffff;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: var(--radius-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+}
