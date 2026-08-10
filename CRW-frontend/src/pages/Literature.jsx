@@ -13,6 +13,15 @@ function LiteratureForm({ onCreate }) {
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  const resetForm = () => {
+    setTitle("");
+    setAuthors("");
+    setPublicationYear("");
+    setDoi("");
+    setUrl("");
+    setSummary("");
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
     setError("");
@@ -26,12 +35,7 @@ function LiteratureForm({ onCreate }) {
         url,
         summary,
       });
-      setTitle("");
-      setAuthors("");
-      setPublicationYear("");
-      setDoi("");
-      setUrl("");
-      setSummary("");
+      resetForm();
     } catch (err) {
       setError(err.response?.data?.message || "Failed to add literature entry.");
     } finally {
@@ -128,6 +132,52 @@ function AnnotationForm({ onAdd }) {
   );
 }
 
+function AnnotationList({ annotations, onAdd }) {
+  return (
+    <div className="annotations">
+      <ul className="list">
+        {annotations.map((annotation) => (
+          <li key={annotation.id} className="annotation">
+            <span className="annotation-author">{annotation.authorUsername}</span>
+            <p>{annotation.content}</p>
+          </li>
+        ))}
+      </ul>
+      <AnnotationForm onAdd={onAdd} />
+    </div>
+  );
+}
+
+function LiteratureCard({ paper, expanded, onToggleExpanded, onAddAnnotation }) {
+  return (
+    <article className="lit-card">
+      <h3>{paper.title}</h3>
+      <p className="muted small">
+        {paper.authors} &middot; {paper.publicationYear}
+      </p>
+      <p>{paper.summary}</p>
+      <a className="link" href={paper.url} target="_blank" rel="noreferrer">
+        {paper.doi}
+      </a>
+
+      <button
+        type="button"
+        className="btn btn-ghost accordion-toggle"
+        onClick={() => onToggleExpanded(paper.id)}
+      >
+        {expanded ? "Hide" : "Show"} Annotations ({paper.annotations.length})
+      </button>
+
+      {expanded && (
+        <AnnotationList
+          annotations={paper.annotations}
+          onAdd={(content) => onAddAnnotation(paper.id, content)}
+        />
+      )}
+    </article>
+  );
+}
+
 function Literature() {
   const { activeWorkspaceId, loading: workspaceLoading } = useWorkspace();
   const [entries, setEntries] = useState([]);
@@ -194,47 +244,15 @@ function Literature() {
             </section>
 
             <div className="lit-grid">
-              {entries.map((paper) => {
-                const expanded = expandedIds.has(paper.id);
-                return (
-                  <article key={paper.id} className="lit-card">
-                    <h3>{paper.title}</h3>
-                    <p className="muted small">
-                      {paper.authors} &middot; {paper.publicationYear}
-                    </p>
-                    <p>{paper.summary}</p>
-                    <a className="link" href={paper.url} target="_blank" rel="noreferrer">
-                      {paper.doi}
-                    </a>
-
-                    <button
-                      type="button"
-                      className="btn btn-ghost accordion-toggle"
-                      onClick={() => toggleExpanded(paper.id)}
-                    >
-                      {expanded ? "Hide" : "Show"} Annotations ({paper.annotations.length})
-                    </button>
-
-                    {expanded && (
-                      <div className="annotations">
-                        <ul className="list">
-                          {paper.annotations.map((annotation) => (
-                            <li key={annotation.id} className="annotation">
-                              <span className="annotation-author">
-                                {annotation.authorUsername}
-                              </span>
-                              <p>{annotation.content}</p>
-                            </li>
-                          ))}
-                        </ul>
-                        <AnnotationForm
-                          onAdd={(content) => handleAddAnnotation(paper.id, content)}
-                        />
-                      </div>
-                    )}
-                  </article>
-                );
-              })}
+              {entries.map((paper) => (
+                <LiteratureCard
+                  key={paper.id}
+                  paper={paper}
+                  expanded={expandedIds.has(paper.id)}
+                  onToggleExpanded={toggleExpanded}
+                  onAddAnnotation={handleAddAnnotation}
+                />
+              ))}
             </div>
           </>
         )}
