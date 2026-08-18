@@ -5,6 +5,22 @@ import { useWorkspace } from "../context/WorkspaceContext";
 
 const STATUSES = ["TODO", "IN_PROGRESS", "COMPLETED"];
 
+function StatusSelect({ value, onChange, className = "" }) {
+  return (
+    <select
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+      className={`badge-select badge-${value.toLowerCase()} ${className}`}
+    >
+      {STATUSES.map((s) => (
+        <option key={s} value={s}>
+          {s.replace("_", " ")}
+        </option>
+      ))}
+    </select>
+  );
+}
+
 function TaskForm({ onCreate, members = [] }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -13,6 +29,14 @@ function TaskForm({ onCreate, members = [] }) {
   const [assigneeId, setAssigneeId] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  const resetForm = () => {
+    setTitle("");
+    setDescription("");
+    setStatus("TODO");
+    setDueDate("");
+    setAssigneeId("");
+  };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -26,11 +50,7 @@ function TaskForm({ onCreate, members = [] }) {
         dueDate: dueDate ? `${dueDate}:00` : null,
         assigneeId: assigneeId ? Number(assigneeId) : null,
       });
-      setTitle("");
-      setDescription("");
-      setStatus("TODO");
-      setDueDate("");
-      setAssigneeId("");
+      resetForm();
     } catch (err) {
       setError(err.response?.data?.message || "Failed to create task.");
     } finally {
@@ -53,13 +73,7 @@ function TaskForm({ onCreate, members = [] }) {
         </label>
         <label>
           Status
-          <select value={status} onChange={(event) => setStatus(event.target.value)}>
-            {STATUSES.map((s) => (
-              <option key={s} value={s}>
-                {s.replace("_", " ")}
-              </option>
-            ))}
-          </select>
+          <StatusSelect value={status} onChange={setStatus} />
         </label>
         <label>
           Assignee
@@ -96,11 +110,118 @@ function TaskForm({ onCreate, members = [] }) {
   );
 }
 
+function TaskCard({ task, onDragStart, onStatusChange, onDelete }) {
+  return (
+    <div
+      className="kanban-card"
+      draggable
+      onDragStart={(e) => onDragStart(e, task.id)}
+    >
+      <div className="kanban-card-title">{task.title}</div>
+      {task.description && (
+        <p className="muted small kanban-card-desc">{task.description}</p>
+      )}
+      {task.assigneeUsername && (
+        <div className="muted small kanban-card-assignee">
+          👤 {task.assigneeUsername}
+        </div>
+      )}
+      {task.dueDate && (
+        <div className="muted small kanban-card-due">
+          📅 {new Date(task.dueDate).toLocaleDateString()}
+        </div>
+      )}
+      <div className="kanban-card-actions">
+        <StatusSelect
+          value={task.status}
+          onChange={(status) => onStatusChange(task.id, status)}
+        />
+        <button
+          type="button"
+          className="btn btn-ghost btn-danger small"
+          onClick={() => onDelete(task.id)}
+        >
+          Delete
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function KanbanColumn({ status, tasks, isDraggedOver, onDragOver, onDragLeave, onDrop, onDragStart, onStatusChange, onDelete }) {
+  return (
+    <div
+      className={`kanban-column ${isDraggedOver ? "drag-over" : ""}`}
+      onDragOver={(e) => onDragOver(e, status)}
+      onDragLeave={(e) => onDragLeave(e, status)}
+      onDrop={(e) => onDrop(e, status)}
+    >
+      <div className="kanban-column-header">
+        <span className={`badge badge-${status.toLowerCase()}`}>
+          {status.replace("_", " ")}
+        </span>
+        <span className="kanban-count">{tasks.length}</span>
+      </div>
+      <div className="kanban-cards-list">
+        {tasks.length === 0 ? (
+          <p className="muted small kanban-empty-msg">No tasks</p>
+        ) : (
+          tasks.map((task) => (
+            <TaskCard
+              key={task.id}
+              task={task}
+              onDragStart={onDragStart}
+              onStatusChange={onStatusChange}
+              onDelete={onDelete}
+            />
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+function TaskListRow({ task, members, onAssigneeChange, onStatusChange, onDelete }) {
+  return (
+    <li className="list-row task-row">
+      <div>
+        <div className="list-title">{task.title}</div>
+        {task.description && <div className="muted small">{task.description}</div>}
+        {task.assigneeUsername && (
+          <div className="muted small">Assigned to {task.assigneeUsername}</div>
+        )}
+        {task.dueDate && (
+          <div className="muted small">Due {new Date(task.dueDate).toLocaleString()}</div>
+        )}
+      </div>
+      <div className="task-actions">
+        <select
+          value={task.assigneeId || ""}
+          onChange={(event) => onAssigneeChange(task.id, event.target.value)}
+          className="badge-select"
+        >
+          <option value="">Unassigned</option>
+          {members.map((m) => (
+            <option key={m.id} value={m.id}>
+              {m.username}
+            </option>
+          ))}
+        </select>
+        <StatusSelect value={task.status} onChange={(status) => onStatusChange(task.id, status)} />
+        <button type="button" className="btn btn-ghost btn-danger" onClick={() => onDelete(task.id)}>
+          Delete
+        </button>
+      </div>
+    </li>
+  );
+}
+
 function Tasks() {
   const { activeWorkspace, activeWorkspaceId, loading: workspaceLoading } = useWorkspace();
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState("kanban"); // "kanban" | "list"
+  const [draggedOverColumn, setDraggedOverColumn] = useState(null);
 
   const loadTasks = async () => {
     if (!activeWorkspaceId) {
@@ -141,8 +262,6 @@ function Tasks() {
     setTasks((prev) => prev.filter((task) => task.id !== taskId));
   };
 
-  const [draggedOverColumn, setDraggedOverColumn] = useState(null);
-
   const handleDragStart = (event, taskId) => {
     event.dataTransfer.setData("text/plain", String(taskId));
   };
@@ -176,6 +295,8 @@ function Tasks() {
   if (workspaceLoading || loading) {
     return <div className="page-loading">Loading tasks...</div>;
   }
+
+  const members = activeWorkspace?.members || [];
 
   return (
     <>
@@ -212,81 +333,27 @@ function Tasks() {
           <>
             <section className="panel">
               <h2>New Task</h2>
-              <TaskForm onCreate={handleCreate} members={activeWorkspace?.members || []} />
+              <TaskForm onCreate={handleCreate} members={members} />
             </section>
 
             {viewMode === "kanban" ? (
               <section className="kanban-section">
                 <h2>Kanban Board</h2>
                 <div className="kanban-board">
-                  {STATUSES.map((status) => {
-                    const columnTasks = tasks.filter((t) => t.status === status);
-                    return (
-                      <div
-                        key={status}
-                        className={`kanban-column ${draggedOverColumn === status ? "drag-over" : ""}`}
-                        onDragOver={(e) => handleDragOver(e, status)}
-                        onDragLeave={(e) => handleDragLeave(e, status)}
-                        onDrop={(e) => handleDrop(e, status)}
-                      >
-                        <div className="kanban-column-header">
-                          <span className={`badge badge-${status.toLowerCase()}`}>
-                            {status.replace("_", " ")}
-                          </span>
-                          <span className="kanban-count">{columnTasks.length}</span>
-                        </div>
-                        <div className="kanban-cards-list">
-                          {columnTasks.length === 0 ? (
-                            <p className="muted small kanban-empty-msg">No tasks</p>
-                          ) : (
-                            columnTasks.map((task) => (
-                              <div
-                                key={task.id}
-                                className="kanban-card"
-                                draggable
-                                onDragStart={(e) => handleDragStart(e, task.id)}
-                              >
-                                <div className="kanban-card-title">{task.title}</div>
-                                {task.description && (
-                                  <p className="muted small kanban-card-desc">{task.description}</p>
-                                )}
-                                {task.assigneeUsername && (
-                                  <div className="muted small kanban-card-assignee">
-                                    👤 {task.assigneeUsername}
-                                  </div>
-                                )}
-                                {task.dueDate && (
-                                  <div className="muted small kanban-card-due">
-                                    📅 {new Date(task.dueDate).toLocaleDateString()}
-                                  </div>
-                                )}
-                                <div className="kanban-card-actions">
-                                  <select
-                                    value={task.status}
-                                    onChange={(event) => handleStatusChange(task.id, event.target.value)}
-                                    className={`badge-select badge-${task.status.toLowerCase()}`}
-                                  >
-                                    {STATUSES.map((s) => (
-                                      <option key={s} value={s}>
-                                        {s.replace("_", " ")}
-                                      </option>
-                                    ))}
-                                  </select>
-                                  <button
-                                    type="button"
-                                    className="btn btn-ghost btn-danger small"
-                                    onClick={() => handleDelete(task.id)}
-                                  >
-                                    Delete
-                                  </button>
-                                </div>
-                              </div>
-                            ))
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
+                  {STATUSES.map((status) => (
+                    <KanbanColumn
+                      key={status}
+                      status={status}
+                      tasks={tasks.filter((t) => t.status === status)}
+                      isDraggedOver={draggedOverColumn === status}
+                      onDragOver={handleDragOver}
+                      onDragLeave={handleDragLeave}
+                      onDrop={handleDrop}
+                      onDragStart={handleDragStart}
+                      onStatusChange={handleStatusChange}
+                      onDelete={handleDelete}
+                    />
+                  ))}
                 </div>
               </section>
             ) : (
@@ -297,54 +364,14 @@ function Tasks() {
                 ) : (
                   <ul className="list">
                     {tasks.map((task) => (
-                      <li key={task.id} className="list-row task-row">
-                        <div>
-                          <div className="list-title">{task.title}</div>
-                          {task.description && (
-                            <div className="muted small">{task.description}</div>
-                          )}
-                          {task.assigneeUsername && (
-                            <div className="muted small">Assigned to {task.assigneeUsername}</div>
-                          )}
-                          {task.dueDate && (
-                            <div className="muted small">
-                              Due {new Date(task.dueDate).toLocaleString()}
-                            </div>
-                          )}
-                        </div>
-                        <div className="task-actions">
-                          <select
-                            value={task.assigneeId || ""}
-                            onChange={(event) => handleAssigneeChange(task.id, event.target.value)}
-                            className="badge-select"
-                          >
-                            <option value="">Unassigned</option>
-                            {(activeWorkspace?.members || []).map((m) => (
-                              <option key={m.id} value={m.id}>
-                                {m.username}
-                              </option>
-                            ))}
-                          </select>
-                          <select
-                            value={task.status}
-                            onChange={(event) => handleStatusChange(task.id, event.target.value)}
-                            className={`badge-select badge-${task.status.toLowerCase()}`}
-                          >
-                            {STATUSES.map((s) => (
-                              <option key={s} value={s}>
-                                {s.replace("_", " ")}
-                              </option>
-                            ))}
-                          </select>
-                          <button
-                            type="button"
-                            className="btn btn-ghost btn-danger"
-                            onClick={() => handleDelete(task.id)}
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </li>
+                      <TaskListRow
+                        key={task.id}
+                        task={task}
+                        members={members}
+                        onAssigneeChange={handleAssigneeChange}
+                        onStatusChange={handleStatusChange}
+                        onDelete={handleDelete}
+                      />
                     ))}
                   </ul>
                 )}
