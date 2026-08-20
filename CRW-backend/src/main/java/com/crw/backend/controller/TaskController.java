@@ -4,6 +4,10 @@ import com.crw.backend.dto.task.TaskAssignRequest;
 import com.crw.backend.dto.task.TaskCreateRequest;
 import com.crw.backend.dto.task.TaskResponse;
 import com.crw.backend.dto.task.TaskStatusUpdateRequest;
+import com.crw.backend.entity.Workspace;
+import com.crw.backend.exception.ResourceNotFoundException;
+import com.crw.backend.repository.WorkspaceRepository;
+import com.crw.backend.security.WorkspaceAccessGuard;
 import com.crw.backend.service.TaskService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -26,10 +30,16 @@ import java.util.List;
 public class TaskController {
 
     private final TaskService taskService;
+    private final WorkspaceAccessGuard workspaceAccessGuard;
+    private final WorkspaceRepository workspaceRepository;
 
     @PostMapping
     public ResponseEntity<TaskResponse> createTask(@Valid @RequestBody TaskCreateRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(taskService.createTask(request));
+        Workspace workspace = workspaceRepository.findById(request.getWorkspaceId())
+                .orElseThrow(() -> new ResourceNotFoundException("Workspace not found: " + request.getWorkspaceId()));
+        workspaceAccessGuard.requireMember(workspace);
+        TaskResponse created = taskService.createTask(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
     @GetMapping("/{id}")

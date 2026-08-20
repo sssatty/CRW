@@ -2,6 +2,10 @@ package com.crw.backend.controller;
 
 import com.crw.backend.dto.meeting.MeetingCreateRequest;
 import com.crw.backend.dto.meeting.MeetingResponse;
+import com.crw.backend.entity.Workspace;
+import com.crw.backend.exception.ResourceNotFoundException;
+import com.crw.backend.repository.WorkspaceRepository;
+import com.crw.backend.security.WorkspaceAccessGuard;
 import com.crw.backend.service.MeetingService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -23,10 +27,16 @@ import java.util.List;
 public class MeetingController {
 
     private final MeetingService meetingService;
+    private final WorkspaceAccessGuard workspaceAccessGuard;
+    private final WorkspaceRepository workspaceRepository;
 
     @PostMapping
     public ResponseEntity<MeetingResponse> createMeeting(@Valid @RequestBody MeetingCreateRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(meetingService.createMeeting(request));
+        Workspace workspace = workspaceRepository.findById(request.getWorkspaceId())
+                .orElseThrow(() -> new ResourceNotFoundException("Workspace not found: " + request.getWorkspaceId()));
+        workspaceAccessGuard.requireMember(workspace);
+        MeetingResponse created = meetingService.createMeeting(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
     @GetMapping("/{id}")
