@@ -84,7 +84,3 @@ npm run dev
 ```
 
 The frontend will start on `http://localhost:5173`.
-
-## Repository
-
-[https://github.com/Rafat-Pantho/Centralized-Research-Workspace](https://github.com/Rafat-Pantho/Centralized-Research-Workspace)
